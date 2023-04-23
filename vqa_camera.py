@@ -1,8 +1,5 @@
 import cv2
 import time
-import threading
-import matplotlib.pyplot as plt
-from queue import Queue
 
 import torch
 from PIL import Image
@@ -25,35 +22,7 @@ def process_frame(frame):
     answer = model.predict_answers(samples=samples, inference_method="generate")
     print(answer)
 
-def on_close(event, is_closed):
-    is_closed.put(True)
-
-def display_frames(frame_queue, is_closed):
-    plt.ion()
-    fig, ax = plt.subplots()
-    fig.canvas.mpl_connect("close_event", lambda event: on_close(event, is_closed))
-
-    while True:
-        if not is_closed.empty():
-            break
-
-        if not frame_queue.empty():
-            frame_rgb = frame_queue.get()
-            ax.imshow(frame_rgb)
-            plt.draw()
-            plt.pause(0.001)
-            ax.clear()
-    plt.close()
-
 def main():
-    frame_queue = Queue()
-    is_closed = Queue()
-
-    display_thread = threading.Thread(
-        target=display_frames, args=(frame_queue, is_closed)
-    )
-    # display_thread.start()
-
     # USBカメラを開く
     cap = cv2.VideoCapture(0)
 
@@ -72,7 +41,6 @@ def main():
 
         # OpenCVのBGR形式からRGB形式に変換
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_queue.put(frame_rgb)
 
         # フレームをPIL.Imageに変換
         pil_image = Image.fromarray(frame_rgb)
@@ -80,8 +48,7 @@ def main():
         # フレームを処理
         process_frame(pil_image)
 
-        if not is_closed.empty():
-            break
+        # cv2.imshow("frame", frame)
 
         # 30fpsになるように待機
         elapsed_time = time.time() - start_time
@@ -90,13 +57,11 @@ def main():
 
         # 'q'キーが押されたら終了
         # if cv2.waitKey(1) & 0xFF == ord('q'):
-        #     break
+            # break
 
     # カメラを閉じる
     cap.release()
-    # cv2.destroyAllWindows()
-    # plt.close()
-    display_thread.join()
+    cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     main()
